@@ -1,5 +1,7 @@
 # Conferência de Áreas — São Paulo
 
+**🔗 Acesse o site: https://enrico525.github.io/Confer-ncia-reas/**
+
 Página que recebe um PDF, Word ou lista de endereços e devolve, para cada terreno, o **SQL**, a **área do terreno**, a área construída e um **IPTU estimado**, com exportação para Excel.
 
 Dados: Cadastro Imobiliário Fiscal (IPTU) da Prefeitura de São Paulo, publicado no [GeoSampa](https://novogeosampa.prefeitura.sp.gov.br) — só terrenos com 500 m² ou mais.
