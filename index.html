@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Conferência de Áreas</title>
+<style>
+  :root { --bg:#f6f7f9; --card:#fff; --tx:#1d2330; --mut:#5d6675; --bd:#d9dee6; --pri:#1f5fbf; --ok:#1d7a46; --warn:#a86400; --bad:#b3261e; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#14171c; --card:#1d2128; --tx:#e6e9ee; --mut:#9aa3b1; --bd:#333a45; --pri:#6aa3ff; --ok:#5cc98a; --warn:#f0b35a; --bad:#ff8a80; } }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--tx); font:15px/1.5 system-ui,Segoe UI,Roboto,sans-serif; }
+  main { max-width:1100px; margin:0 auto; padding:24px 16px 64px; }
+  h1 { font-size:22px; margin:0 0 4px; }
+  .sub { color:var(--mut); margin:0 0 20px; }
+  .card { background:var(--card); border:1px solid var(--bd); border-radius:10px; padding:16px; margin-bottom:16px; }
+  h2 { font-size:16px; margin:0 0 10px; }
+  textarea { width:100%; min-height:180px; font:13px/1.4 ui-monospace,Consolas,monospace; padding:10px; border:1px solid var(--bd); border-radius:8px; background:var(--bg); color:var(--tx); }
+  button { background:var(--pri); color:#fff; border:0; border-radius:8px; padding:9px 16px; font-size:14px; cursor:pointer; }
+  button.sec { background:transparent; color:var(--pri); border:1px solid var(--pri); }
+  button:disabled { opacity:.5; cursor:default; }
+  .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:10px; }
+  .muted { color:var(--mut); font-size:13px; }
+  .tbl { overflow-x:auto; }
+  table { border-collapse:collapse; width:100%; font-size:13px; }
+  th, td { border-bottom:1px solid var(--bd); padding:6px 8px; text-align:left; vertical-align:top; white-space:nowrap; }
+  th { position:sticky; top:0; background:var(--card); }
+  td.num { text-align:right; font-variant-numeric:tabular-nums; }
+  .ok { color:var(--ok); } .warn { color:var(--warn); } .bad { color:var(--bad); }
+  a { color:var(--pri); }
+  .note { font-size:13px; color:var(--mut); border-left:3px solid var(--warn); padding-left:10px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Conferência de Áreas — São Paulo</h1>
+  <p class="sub">Encontre área do terreno, SQL e IPTU estimado a partir de uma lista de endereços.</p>
+
+  <section class="card">
+    <h2>1. Envie o documento ou cole os endereços</h2>
+    <input type="file" id="file" accept=".pdf,.docx,.txt">
+    <p class="muted">Aceita PDF, Word (.docx) ou texto. Os endereços encontrados aparecem abaixo — confira e corrija antes de buscar. Um endereço por linha.</p>
+    <textarea id="addrs" placeholder="Ex.:&#10;Avenida das Nações Unidas, 12901&#10;Rua Frei Caneca 569"></textarea>
+    <div class="row">
+      <button id="go" disabled>Buscar</button>
+      <span id="status" class="muted">Carregando base de dados…</span>
+    </div>
+  </section>
+
+  <section class="card" id="resCard" hidden>
+    <h2>2. Resultado</h2>
+    <div class="row" style="margin:0 0 10px">
+      <button id="xlsx">Baixar planilha (Excel)</button>
+      <span id="summary" class="muted"></span>
+    </div>
+    <div class="tbl"><table id="res"></table></div>
+  </section>
+
+  <p class="note">
+    Fonte: Cadastro Imobiliário Fiscal (IPTU) da Prefeitura de São Paulo, publicado no GeoSampa — exercício <span id="ano">?</span>.
+    Área e SQL vêm do cadastro oficial. O <b>valor venal de referência</b> é área × valor do m² do terreno (sem fatores de testada/profundidade)
+    e o <b>IPTU estimado</b> aplica 1,5% sobre ele — é só uma aproximação: o valor real pode mudar por descontos, isenções e pela trava de reajuste anual.
+    Para o valor exato, use o link "conferir" de cada SQL.
+  </p>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="match.js"></script>
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+const $ = id => document.getElementById(id);
+let index = null, results = [];
+// Link oficial onde a pessoa confere o IPTU exato pelo SQL.
+const CONSULTA = "https://www.prefeitura.sp.gov.br/cidade/secretarias/fazenda/servicos/iptu/";
+
+fetch("terrenos.json").then(r => r.json()).then(d => {
+  index = buildIndex(d);
+  $("ano").textContent = d.ano;
+  $("status").textContent = `Base carregada: ${d.rows.length.toLocaleString("pt-BR")} terrenos (≥ ${d.areaMin} m²).`;
+  $("go").disabled = false;
+}).catch(e => { $("status").innerHTML = `<span class="bad">Falha ao carregar a base: ${e.message}</span>`; });
+
+$("file").onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  $("status").textContent = "Lendo arquivo…";
+  try {
+    let text;
+    if (/\.pdf$/i.test(f.name)) {
+      const pdf = await pdfjsLib.getDocument({ data: await f.arrayBuffer() }).promise;
+      const parts = [];
+      for (let p = 1; p <= pdf.numPages; p++) {
+        const c = await (await pdf.getPage(p)).getTextContent();
+        parts.push(c.items.map(i => i.str + (i.hasEOL ? "\n" : " ")).join(""));
+      }
+      text = parts.join("\n");
+    } else if (/\.docx$/i.test(f.name)) {
+      text = (await mammoth.extractRawText({ arrayBuffer: await f.arrayBuffer() })).value;
+    } else text = await f.text();
+    const found = extractAddresses(text);
+    $("addrs").value = found.join("\n");
+    $("status").textContent = `${found.length} endereço(s) encontrados no arquivo. Confira a lista e clique em Buscar.`;
+  } catch (err) { $("status").innerHTML = `<span class="bad">Não consegui ler o arquivo: ${err.message}</span>`; }
+};
+
+const brl = v => v == null ? "" : v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const m2 = v => v == null ? "" : v.toLocaleString("pt-BR", { maximumFractionDigits: 2 });
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" })[c]);
+
+$("go").onclick = () => {
+  const lines = $("addrs").value.split("\n").map(s => s.trim()).filter(Boolean);
+  results = [];
+  for (const q of lines) {
+    const m = lookup(index, q);
+    if (!m.hits.length) results.push({ q, status: m.status });
+    else m.hits.forEach(h => results.push({ q, status: m.status, h }));
+  }
+  render();
+};
+
+function rowOut(r) {
+  const h = r.h || {};
+  const venal = h.area != null && h.vm2 != null ? Math.round(h.area * h.vm2 * 100) / 100 : null;
+  return {
+    "Endereço informado": r.q, "Situação": r.status,
+    "SQL": h.sql || "", "Endereço no cadastro": h.end || "", "Bairro": h.bairro || "", "CEP": h.cep || "",
+    "Área do terreno (m²)": h.area ?? null, "Área construída (m²)": h.ac ?? null,
+    "Valor m² terreno (R$)": h.vm2 ?? null, "Valor venal ref. terreno (R$)": venal,
+    "IPTU estimado (R$/ano)": venal != null ? Math.round(venal * 0.015 * 100) / 100 : null,
+    "Unidades no lote": h.n || ""
+  };
+}
+
+function render() {
+  const cls = s => s.startsWith("Encontrado") ? "ok" : s.startsWith("Não") ? "bad" : "warn";
+  const out = results.map(rowOut);
+  const head = ["Endereço informado","Situação","SQL","Endereço no cadastro","Área do terreno (m²)","Área construída (m²)","Valor venal ref. terreno (R$)","IPTU estimado (R$/ano)",""];
+  $("res").innerHTML = "<tr>" + head.map(h => `<th>${h}</th>`).join("") + "</tr>" + out.map((o, i) => `<tr>
+    <td>${esc(o["Endereço informado"])}</td><td class="${cls(o["Situação"])}">${esc(o["Situação"])}</td>
+    <td>${esc(o.SQL)}</td><td>${esc(o["Endereço no cadastro"])} ${o["Bairro"] ? "— " + esc(o["Bairro"]) : ""}</td>
+    <td class="num">${m2(o["Área do terreno (m²)"])}</td><td class="num">${m2(o["Área construída (m²)"])}</td>
+    <td class="num">${brl(o["Valor venal ref. terreno (R$)"])}</td><td class="num">${brl(o["IPTU estimado (R$/ano)"])}</td>
+    <td>${o.SQL ? `<a href="${CONSULTA}" target="_blank" rel="noopener" title="Abra e informe o SQL ${esc(o.SQL)}">conferir</a>` : ""}</td></tr>`).join("");
+  const ok = new Set(results.filter(r => r.h).map(r => r.q)).size, tot = new Set(results.map(r => r.q)).size;
+  $("summary").textContent = `${ok} de ${tot} endereços com resultado.`;
+  $("resCard").hidden = false;
+}
+
+$("xlsx").onclick = () => {
+  const ws = XLSX.utils.json_to_sheet(results.map(rowOut));
+  ws["!cols"] = Object.keys(rowOut({ q: "", status: "" })).map(() => ({ wch: 22 }));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Áreas");
+  XLSX.writeFile(wb, "conferencia-areas.xlsx");
+};
+</script>
+</body>
+</html>
