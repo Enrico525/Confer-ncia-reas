@@ -33,7 +33,7 @@
 <body>
 <main>
   <h1>Conferência de Áreas — São Paulo</h1>
-  <p class="sub">Encontre área do terreno, SQL e IPTU estimado a partir de uma lista de endereços.</p>
+  <p class="sub">Encontre área do terreno, SQL e zoneamento a partir de uma lista de endereços.</p>
 
   <section class="card">
     <h2>1. Envie o documento ou cole os endereços</h2>
@@ -57,9 +57,9 @@
 
   <p class="note">
     Fonte: Cadastro Imobiliário Fiscal (IPTU) da Prefeitura de São Paulo, publicado no GeoSampa — exercício <span id="ano">?</span>.
-    Área e SQL vêm do cadastro oficial. O <b>valor venal de referência</b> é área × valor do m² do terreno (sem fatores de testada/profundidade)
-    e o <b>IPTU estimado</b> aplica 1,5% sobre ele — é só uma aproximação: o valor real pode mudar por descontos, isenções e pela trava de reajuste anual.
-    Para o valor exato, use o link "conferir" de cada SQL.
+    Área e SQL vêm do cadastro oficial. O <b>zoneamento</b> é o da Lei 18.081/24 (mapa do GeoSampa), cruzado com o desenho do lote;
+    quando o lote fica em mais de uma zona, aparecem todas que cobrem ao menos 10% dele, a maior primeiro. Confirme no GeoSampa antes de decidir.
+    Para o IPTU exato, use o link "conferir" de cada SQL.
   </p>
 </main>
 
@@ -103,7 +103,6 @@ $("file").onchange = async e => {
   } catch (err) { $("status").innerHTML = `<span class="bad">Não consegui ler o arquivo: ${err.message}</span>`; }
 };
 
-const brl = v => v == null ? "" : v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const m2 = v => v == null ? "" : v.toLocaleString("pt-BR", { maximumFractionDigits: 2 });
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" })[c]);
 
@@ -121,26 +120,22 @@ $("go").onclick = () => {
 
 function rowOut(r) {
   const h = r.h || {};
-  const venal = h.area != null && h.vm2 != null ? Math.round(h.area * h.vm2 * 100) / 100 : null;
   return {
     "Nome": r.nome || "", "Endereço informado": r.q, "Situação": r.status,
     "SQL": h.sql || "", "Endereço no cadastro": h.end || "", "Bairro": h.bairro || "", "CEP": h.cep || "",
-    "Área do terreno (m²)": h.area ?? null, "Área construída (m²)": h.ac ?? null,
-    "Valor m² terreno (R$)": h.vm2 ?? null, "Valor venal ref. terreno (R$)": venal,
-    "IPTU estimado (R$/ano)": venal != null ? Math.round(venal * 0.015 * 100) / 100 : null,
-    "Unidades no lote": h.n || ""
+    "Área do terreno (m²)": h.area ?? null, "Zoneamento": h.zona || "",
+    "Valor m² terreno (R$)": h.vm2 ?? null, "Unidades no lote": h.n || ""
   };
 }
 
 function render() {
   const cls = s => s.startsWith("Encontrado") ? "ok" : s.startsWith("Não") ? "bad" : "warn";
   const out = results.map(rowOut);
-  const head = ["Nome","Endereço informado","Situação","SQL","Endereço no cadastro","Área do terreno (m²)","Área construída (m²)","Valor venal ref. terreno (R$)","IPTU estimado (R$/ano)",""];
+  const head = ["Nome","Endereço informado","Situação","SQL","Endereço no cadastro","Área do terreno (m²)","Zoneamento",""];
   $("res").innerHTML = "<tr>" + head.map(h => `<th>${h}</th>`).join("") + "</tr>" + out.map((o, i) => `<tr>
     <td>${esc(o.Nome)}</td><td>${esc(o["Endereço informado"])}</td><td class="${cls(o["Situação"])}">${esc(o["Situação"])}</td>
     <td>${esc(o.SQL)}</td><td>${esc(o["Endereço no cadastro"])} ${o["Bairro"] ? "— " + esc(o["Bairro"]) : ""}</td>
-    <td class="num">${m2(o["Área do terreno (m²)"])}</td><td class="num">${m2(o["Área construída (m²)"])}</td>
-    <td class="num">${brl(o["Valor venal ref. terreno (R$)"])}</td><td class="num">${brl(o["IPTU estimado (R$/ano)"])}</td>
+    <td class="num">${m2(o["Área do terreno (m²)"])}</td><td>${esc(o.Zoneamento)}</td>
     <td>${o.SQL ? `<a href="${CONSULTA}" target="_blank" rel="noopener" title="Abra e informe o SQL ${esc(o.SQL)}">conferir</a>` : ""}</td></tr>`).join("");
   const ok = new Set(results.filter(r => r.h).map(r => r.line)).size, tot = new Set(results.map(r => r.line)).size;
   $("summary").textContent = `${ok} de ${tot} endereços com resultado.`;

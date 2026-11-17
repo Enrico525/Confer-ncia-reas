@@ -3,12 +3,12 @@ const assert = require("assert");
 const { buildIndex, lookup, extractAddresses, splitLine } = require("./match.js");
 
 const idx = buildIndex({
-  cols: ["sql", "logradouro", "numero", "complemento", "bairro", "cep", "area", "ac", "vm2", "n"],
+  cols: ["sql", "logradouro", "numero", "complemento", "bairro", "cep", "area", "zona", "vm2", "n"],
   rows: [
     ["085.123.0001-1", "AV DAS NACOES UNIDAS", "12901", "", "BROOKLIN", "04578-000", 25000, 0, 3000, 1],
     ["010.020.0030-4", "R VINTE E CINCO DE MARCO", "100", "", "SE", "01021-000", 1200, 800, 5000, 1],
     ["020.030.0040-5", "R 25 DE MARCO", "300", "", "SE", "01021-000", 1500, 0, 5000, 1],
-    ["030.040.0050-6", "R DR ARNALDO", "455", "", "CERQUEIRA CESAR", "01246-903", 9000, 5000, 4000, 1],
+    ["030.040.0050-6", "R DR ARNALDO", "455", "", "CERQUEIRA CESAR", "01246-903", 9000, "ZEU / ZM", 4000, 1],
     ["124.030.0019-0", "AV JORN PAULO ZINGG", "1225", "", "VILA JARAGUA", "05157-030", 4646, 0, 900, 1],
     ["067.170.0028-7", "R PDE LEAO PERUCHE", "445", "", "TUCURUVI", "02309-130", 775, 0, 900, 1],
     ["083.031.0051-3", "R FERNAO DIAS", "210", "", "", "", 538, 0, 900, 1],
@@ -24,6 +24,7 @@ assert.strictEqual(lookup(idx, "Rua Inexistente 10").status, "Não encontrado");
 assert.match(lookup(idx, "Av Nacoes Unidas 99999").status, /número não/);
 assert.strictEqual(lookup(idx, "Rua Doutor Arnaldo Silva 455").status, "Não encontrado"); // só parte das palavras não basta
 assert.strictEqual(lookup(idx, "Rua Dr Arnaldu 455").status, "Encontrado");             // 1 letra de diferença
+assert.strictEqual(lookup(idx, "Rua Dr Arnaldo 455").hits[0].zona, "ZEU / ZM");
 assert.match(lookup(idx, "Av Nacoes Unidas km 12").status, /Sem número/);
 assert.strictEqual(lookup(idx, "Rodovia Fernão Dias, s/n - Km 84 - Tremembé").hits.length, 0); // sem número: só sinaliza
 assert.strictEqual(lookup(idx, "Avenida das Nações Unidas - Brooklin").status, "Sem número — conferir");

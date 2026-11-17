@@ -22,7 +22,7 @@ function buildIndex(d) {
   const ruas = new Map();
   for (const r of d.rows) {
     const h = { sql: r[c.sql], end: `${r[c.logradouro]}, ${r[c.numero]}${r[c.complemento] ? " " + r[c.complemento] : ""}`,
-      bairro: r[c.bairro], cep: r[c.cep], num: +r[c.numero] || 0, area: r[c.area], ac: r[c.ac], vm2: r[c.vm2], n: r[c.n] };
+      bairro: r[c.bairro], cep: r[c.cep], num: +r[c.numero] || 0, area: r[c.area], vm2: r[c.vm2], zona: r[c.zona], n: r[c.n] };
     const k = ruaKey(r[c.logradouro]);
     if (!ruas.has(k)) ruas.set(k, []);
     ruas.get(k).push(h);

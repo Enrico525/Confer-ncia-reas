@@ -3,10 +3,12 @@
 Uso:  python prep.py IPTU_2026.zip [area_minima_m2]
 Baixe o zip em https://novogeosampa.prefeitura.sp.gov.br  (camada Lote > Download > IPTU).
 """
-import csv, io, json, re, sys, zipfile
+import csv, io, json, os, re, sys, zipfile
 
 src = sys.argv[1]
 AREA_MIN = float(sys.argv[2]) if len(sys.argv) > 2 else 500
+# Zoneamento por lote, gerado por zona.py (opcional).
+ZONAS = json.load(open("zonas.json", encoding="utf-8")) if os.path.exists("zonas.json") else {}
 
 
 def num(s):
@@ -67,7 +69,7 @@ for r in rd:
         (r.get("BAIRRO DO IMOVEL") or "").strip(),
         (r.get("CEP DO IMOVEL") or "").strip(),
         area,
-        num(r.get("AREA CONSTRUIDA")),
+        ZONAS.get(sql[:6] + "C" + cond[:2] if is_cond else sql[:10], ""),
         num(r.get("VALOR DO M2 DO TERRENO")),
         1,
     ]
@@ -75,7 +77,7 @@ for r in rd:
 rows = list(lotes.values())
 assert rows, "Nenhum terreno passou no filtro — confira o arquivo."
 out = {"ano": ano, "areaMin": AREA_MIN,
-       "cols": ["sql", "logradouro", "numero", "complemento", "bairro", "cep", "area", "ac", "vm2", "n"],
+       "cols": ["sql", "logradouro", "numero", "complemento", "bairro", "cep", "area", "zona", "vm2", "n"],
        "rows": rows}
 with open("terrenos.json", "w", encoding="utf-8") as f:
     json.dump(out, f, ensure_ascii=False, separators=(",", ":"))
