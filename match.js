@@ -83,10 +83,11 @@ const FONE_RE = /\s*[-–|]?\s*\b(fone|tel|telefone|whatsapp)\b[\s\S]*$/i;
 // Devolve linhas "Nome | endereço": o nome é o texto antes do endereço na mesma linha
 // ou a linha logo acima (ex.: lista de motéis com nome e endereço em linhas seguidas).
 // O leitor de Word ignora a quebra de linha entre nome e endereço ("Affinity MotelRua Doutor..."):
-// quando o tipo da via vem grudado numa palavra, separa em outra linha.
-const COLADO_RE = /([a-zà-ÿ'’)])(?=(Rua|Avenida|Alameda|Estrada|Travessa|Pra[çc]a|Rodovia|Largo|Viela|Av\.|R\.)\s)/g;
+// quando o tipo da via vem grudado no nome (que pode terminar em maiúscula ou número), separa em outra linha.
+// "Av."/"R." só depois de minúscula, senão "Dr. Arnaldo" viraria "D" + "R. Arnaldo".
+const COLADO_RE = /(\S)(?=(?:Rua|Avenida|Alameda|Estrada|Travessa|Pra[çc]a|Rodovia|Largo|Viela|RUA|AVENIDA|ALAMEDA|ESTRADA|TRAVESSA|PRA[ÇC]A|RODOVIA|LARGO|VIELA)\s)|([a-zà-ÿ'’)])(?=(?:Av\.|R\.)\s)/g;
 function extractAddresses(text) {
-  const t = String(text).replace(COLADO_RE, "$1\n"), out = new Set();
+  const t = String(text).replace(COLADO_RE, "$1$2\n"), out = new Set();
   for (const m of t.matchAll(END_RE)) {
     const end = m[0].replace(FONE_RE, "").replace(/\s+/g, " ").replace(/[\s,;-]+$/, "").trim();
     if (!/\d|\bs\s*\/\s*n\b/i.test(end)) continue;

@@ -39,6 +39,9 @@ assert.deepStrictEqual(lista, ["Alphis Motel | Avenida Coronel Sezefredo Fagunde
 // Texto como o leitor de Word (mammoth) entrega: nome grudado no endereço.
 const colado = extractAddresses("Motéis ZONA NORTE\n\nAffinity MotelRua Doutor Vidal Reis, 150 - Parque Novo Mundo Fone: 11 2967-2153\n\nMotel Makaku'sRua da Coroa, 1400 - Vila Guilherme\n\nHotel CantareiraAvenida Parada Pinto, 1740");
 assert.deepStrictEqual(colado, ["Affinity Motel | Rua Doutor Vidal Reis, 150 - Parque Novo Mundo", "Motel Makaku's | Rua da Coroa, 1400 - Vila Guilherme", "Hotel Cantareira | Avenida Parada Pinto, 1740"]);
+// Nome terminado em maiúscula/número, endereço em maiúsculas; "Dr." não pode ser quebrado.
+const colado2 = extractAddresses("MOTEL XRua Augusta, 10\n\nMotel 24Rua Augusta, 20\n\nMOTEL YRUA AUGUSTA, 30\n\nMotel BomAv. Dr. Arnaldo, 455");
+assert.deepStrictEqual(colado2, ["MOTEL X | Rua Augusta, 10", "Motel 24 | Rua Augusta, 20", "MOTEL Y | RUA AUGUSTA, 30", "Motel Bom | Av. Dr. Arnaldo, 455"]);
 assert.deepStrictEqual(splitLine(lista[0]), { nome: "Alphis Motel", end: "Avenida Coronel Sezefredo Fagundes, 8150 - Tucuruvi" });
 assert.deepStrictEqual(splitLine("Rua X, 10"), { nome: "", end: "Rua X, 10" });
 console.log("ok");
