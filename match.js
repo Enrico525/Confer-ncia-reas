@@ -1,9 +1,9 @@
 // Busca de endereços na base de terrenos. Usado pela página e pelo teste (node test.js).
-const TIPOS = "RUA|R|AVENIDA|AV|AVN|ALAMEDA|AL|ESTRADA|ESTR|EST|ES|TRAVESSA|TV|TRV|PRACA|PC|PCA|RODOVIA|ROD|VIA|LARGO|LGO|LG|VIELA|VL|VIADUTO|VD|PASSAGEM|PSG|PARQUE|PQ|PRAIA|PR|BECO|BC|PONTE|PTE|VILA|JARDIM|JD|CAMINHO|CAM|TRAV|ESTRADA MUNICIPAL";
+const TIPOS = "RUA|R|AVENIDA|AV|AVN|ALAMEDA|AL|ESTRADA|ESTR|EST|ES|TRAVESSA|TV|TRV|PRACA|PC|PCA|RODOVIA|ROD|RV|VIA|LARGO|LGO|LG|VIELA|VL|VIADUTO|VD|PASSAGEM|PSG|PARQUE|PQ|PRAIA|PR|BECO|BC|PONTE|PTE|VILA|JARDIM|JD|CAMINHO|CAM|TRAV|ESTRADA MUNICIPAL";
 const TIPO_RE = new RegExp(`^(${TIPOS})\\b\\s*`);
 const VAZIAS = new Set("DE DA DO DOS DAS E D".split(" "));
 // Títulos abreviados em um lado e por extenso no outro; removidos para comparar.
-const TITULOS = new Set("DR DOUTOR PROF PROFESSOR PROFA PROFESSORA ENG ENGENHEIRO CEL CORONEL GAL GEN GENERAL PRES PRESIDENTE SEN SENADOR DEP DEPUTADO MAL MARECHAL CAP CAPITAO TEN TENENTE STA SANTA STO SANTO S SAO CONS CONSELHEIRO BRIG BRIGADEIRO DQ DUQUE COM COMENDADOR VER VEREADOR DES DESEMBARGADOR PE PADRE FR FREI MONS MONSENHOR D DOM DONA ALM ALMIRANTE MAJ MAJOR GOV GOVERNADOR VISC VISCONDE BARAO BR".split(" "));
+const TITULOS = new Set("DR DOUTOR PROF PROFESSOR PROFA PROFESSORA ENG ENGENHEIRO CEL CORONEL GAL GEN GENERAL PRES PRESIDENTE SEN SENADOR DEP DEPUTADO MAL MARECHAL CAP CAPITAO TEN TENENTE STA SANTA STO SANTO S SAO CONS CONSELHEIRO BRIG BRIGADEIRO DQ DUQUE COM COMENDADOR VER VEREADOR DES DESEMBARGADOR PE PADRE FR FREI MONS MONSENHOR D DOM DONA ALM ALMIRANTE MAJ MAJOR GOV GOVERNADOR VISC VISCONDE BARAO BR JORN JORNALISTA PDE SOLD SOLDADO TTE COMEN DESEM MAEST MAESTRO SARG SARGENTO COMTE CMTE COMANDANTE ARQ ARQUITETO MIN MINISTRO CARD CARDEAL DRA DOUTORA".split(" "));
 
 function norm(s) {
   return String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase()
@@ -58,8 +58,9 @@ function lev1(a, b) { // distância de edição ≤ 1
 }
 
 function lookup(idx, query) {
-  // Endereço por km (rodovias): o cadastro usa outra numeração, então lista os terrenos da via.
-  const q = String(query).replace(/\bkm\b.*$/i, "");
+  // Sem número (s/n ou só km de rodovia): só sinaliza, sem puxar terrenos.
+  if (/\bs\s*\/\s*n\b|\bkm\b/i.test(query)) return { status: "Sem número — conferir", hits: [] };
+  const q = String(query);
   // Tenta cada número do texto como "número do imóvel" (ruas como "25 de Março" têm número no nome).
   const nums = [...q.matchAll(/\d{1,6}/g)];
   let ruas = [], num = null;
@@ -67,24 +68,41 @@ function lookup(idx, query) {
     const r = findRuas(idx, q.slice(0, m.index));
     if (r.length) { ruas = r; num = +m[0]; break; }
   }
-  if (!ruas.length) { ruas = findRuas(idx, q.replace(/\d.*$/, "")); num = null; }
-  if (!ruas.length) return { status: "Não encontrado", hits: [] };
+  if (!ruas.length) return { status: nums.length ? "Não encontrado" : "Sem número — conferir", hits: [] };
   const all = ruas.flatMap(k => idx.ruas.get(k));
-  if (num == null) return { status: "Sem número — terrenos da rua", hits: all.slice(0, 10) };
   const exact = all.filter(h => h.num === num);
   if (exact.length) return { status: "Encontrado", hits: exact };
   // Terrenos grandes ocupam vários números; aceita o cadastrado mais próximo até 100.
-  const near = all.map(h => [Math.abs(h.num - num), h]).filter(([d]) => d <= 100).sort((a, b) => a[0] - b[0]);
+  const near = all.filter(h => h.num > 0).map(h => [Math.abs(h.num - num), h]).filter(([d]) => d <= 100).sort((a, b) => a[0] - b[0]);
   if (near.length) return { status: `Aproximado (nº ${near[0][1].num})`, hits: near.filter(([d]) => d === near[0][0]).map(([, h]) => h) };
   return { status: "Rua encontrada, número não — conferir", hits: [] };
 }
 
 const END_RE = new RegExp(`\\b(RUA|R\\.|AV\\.?|AVENIDA|ALAMEDA|AL\\.|ESTRADA|ESTR\\.|TRAVESSA|TV\\.|PRA[ÇC]A|P[ÇC]A\\.?|RODOVIA|ROD\\.|LARGO|VIELA)\\s[^\\n]{2,150}`, "gi"); // até o fim da linha; lookup() acha o número
+const FONE_RE = /\s*[-–|]?\s*\b(fone|tel|telefone|whatsapp)\b[\s\S]*$/i;
+// Devolve linhas "Nome | endereço": o nome é o texto antes do endereço na mesma linha
+// ou a linha logo acima (ex.: lista de motéis com nome e endereço em linhas seguidas).
 function extractAddresses(text) {
-  const out = new Set();
-  for (const m of String(text).matchAll(END_RE)) if (/\d/.test(m[0])) out.add(m[0].replace(/\s+/g, " ").trim());
-  if (!out.size) String(text).split(/\n/).map(s => s.trim()).filter(Boolean).forEach(s => out.add(s));
+  const t = String(text), out = new Set();
+  for (const m of t.matchAll(END_RE)) {
+    const end = m[0].replace(FONE_RE, "").replace(/\s+/g, " ").replace(/[\s,;-]+$/, "").trim();
+    if (!/\d|\bs\s*\/\s*n\b/i.test(end)) continue;
+    const ini = t.lastIndexOf("\n", m.index - 1) + 1;
+    let nome = t.slice(ini, m.index).trim();
+    if (!nome && ini > 0) {
+      const prev = t.slice(t.lastIndexOf("\n", ini - 2) + 1, ini - 1).trim();
+      if (prev && prev.length <= 80 && !new RegExp(END_RE.source, "i").test(prev)) nome = prev;
+    }
+    nome = nome.replace(/[\s:|,;-]+$/, "").replace(/\s+/g, " ");
+    out.add(nome ? `${nome} | ${end}` : end);
+  }
+  if (!out.size) t.split(/\n/).map(s => s.trim()).filter(Boolean).forEach(s => out.add(s));
   return [...out];
 }
+// "Nome | endereço" -> { nome, end }; linha sem " | " é só endereço.
+function splitLine(line) {
+  const i = line.indexOf(" | ");
+  return i < 0 ? { nome: "", end: line.trim() } : { nome: line.slice(0, i).trim(), end: line.slice(i + 3).trim() };
+}
 
-if (typeof module !== "undefined") module.exports = { norm, ruaKey, buildIndex, lookup, extractAddresses };
+if (typeof module !== "undefined") module.exports = { norm, ruaKey, buildIndex, lookup, extractAddresses, splitLine };

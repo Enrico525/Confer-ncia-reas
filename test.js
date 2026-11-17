@@ -1,6 +1,6 @@
 // node test.js — checa a busca de endereços com uma base de exemplo.
 const assert = require("assert");
-const { buildIndex, lookup, extractAddresses } = require("./match.js");
+const { buildIndex, lookup, extractAddresses, splitLine } = require("./match.js");
 
 const idx = buildIndex({
   cols: ["sql", "logradouro", "numero", "complemento", "bairro", "cep", "area", "ac", "vm2", "n"],
@@ -9,6 +9,9 @@ const idx = buildIndex({
     ["010.020.0030-4", "R VINTE E CINCO DE MARCO", "100", "", "SE", "01021-000", 1200, 800, 5000, 1],
     ["020.030.0040-5", "R 25 DE MARCO", "300", "", "SE", "01021-000", 1500, 0, 5000, 1],
     ["030.040.0050-6", "R DR ARNALDO", "455", "", "CERQUEIRA CESAR", "01246-903", 9000, 5000, 4000, 1],
+    ["124.030.0019-0", "AV JORN PAULO ZINGG", "1225", "", "VILA JARAGUA", "05157-030", 4646, 0, 900, 1],
+    ["067.170.0028-7", "R PDE LEAO PERUCHE", "445", "", "TUCURUVI", "02309-130", 775, 0, 900, 1],
+    ["083.031.0051-3", "R FERNAO DIAS", "210", "", "", "", 538, 0, 900, 1],
   ],
 });
 
@@ -22,7 +25,17 @@ assert.match(lookup(idx, "Av Nacoes Unidas 99999").status, /número não/);
 assert.strictEqual(lookup(idx, "Rua Doutor Arnaldo Silva 455").status, "Não encontrado"); // só parte das palavras não basta
 assert.strictEqual(lookup(idx, "Rua Dr Arnaldu 455").status, "Encontrado");             // 1 letra de diferença
 assert.match(lookup(idx, "Av Nacoes Unidas km 12").status, /Sem número/);
+assert.strictEqual(lookup(idx, "Rodovia Fernão Dias, s/n - Km 84 - Tremembé").hits.length, 0); // sem número: só sinaliza
+assert.strictEqual(lookup(idx, "Avenida das Nações Unidas - Brooklin").status, "Sem número — conferir");
+assert.strictEqual(lookup(idx, "Avenida Jornalista Paulo Zingg, 1225").status, "Encontrado");      // JORN no cadastro
+assert.strictEqual(lookup(idx, "Rua Padre Leão Peruche, 445").status, "Encontrado");              // PDE no cadastro
 
 const ext = extractAddresses("Imóvel 1: Avenida das Nações Unidas, 12901 - Área 25.000 m²\nTexto qualquer sobre a rua sem número\nR. Dr. Arnaldo, 455");
 assert.strictEqual(ext.length, 2, ext);
+
+// Modelo "lista de motéis": nome numa linha, endereço + telefone na seguinte.
+const lista = extractAddresses("Motéis ZONA NORTE\n\nAlphis Motel\nAvenida Coronel Sezefredo Fagundes, 8150 - Tucuruvi Fone: 11 2995-2316 | 2206-8566\n\nMotel Eskimó Rua Estela Borges Morato, 271 - Freguesia do Ó - São Paulo, SP Fone: 11 3931-0645");
+assert.deepStrictEqual(lista, ["Alphis Motel | Avenida Coronel Sezefredo Fagundes, 8150 - Tucuruvi", "Motel Eskimó | Rua Estela Borges Morato, 271 - Freguesia do Ó - São Paulo, SP"]);
+assert.deepStrictEqual(splitLine(lista[0]), { nome: "Alphis Motel", end: "Avenida Coronel Sezefredo Fagundes, 8150 - Tucuruvi" });
+assert.deepStrictEqual(splitLine("Rua X, 10"), { nome: "", end: "Rua X, 10" });
 console.log("ok");

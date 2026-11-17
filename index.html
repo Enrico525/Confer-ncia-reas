@@ -38,7 +38,7 @@
   <section class="card">
     <h2>1. Envie o documento ou cole os endereços</h2>
     <input type="file" id="file" accept=".pdf,.docx,.txt">
-    <p class="muted">Aceita PDF, Word (.docx) ou texto. Os endereços encontrados aparecem abaixo — confira e corrija antes de buscar. Um endereço por linha.</p>
+    <p class="muted">Aceita PDF, Word (.docx) ou texto. Os endereços encontrados aparecem abaixo — confira e corrija antes de buscar. Um endereço por linha; opcionalmente "Nome | endereço".</p>
     <textarea id="addrs" placeholder="Ex.:&#10;Avenida das Nações Unidas, 12901&#10;Rua Frei Caneca 569"></textarea>
     <div class="row">
       <button id="go" disabled>Buscar</button>
@@ -110,10 +110,11 @@ const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt
 $("go").onclick = () => {
   const lines = $("addrs").value.split("\n").map(s => s.trim()).filter(Boolean);
   results = [];
-  for (const q of lines) {
+  for (const line of lines) {
+    const { nome, end: q } = splitLine(line);
     const m = lookup(index, q);
-    if (!m.hits.length) results.push({ q, status: m.status });
-    else m.hits.forEach(h => results.push({ q, status: m.status, h }));
+    if (!m.hits.length) results.push({ line, nome, q, status: m.status });
+    else m.hits.forEach(h => results.push({ line, nome, q, status: m.status, h }));
   }
   render();
 };
@@ -122,7 +123,7 @@ function rowOut(r) {
   const h = r.h || {};
   const venal = h.area != null && h.vm2 != null ? Math.round(h.area * h.vm2 * 100) / 100 : null;
   return {
-    "Endereço informado": r.q, "Situação": r.status,
+    "Nome": r.nome || "", "Endereço informado": r.q, "Situação": r.status,
     "SQL": h.sql || "", "Endereço no cadastro": h.end || "", "Bairro": h.bairro || "", "CEP": h.cep || "",
     "Área do terreno (m²)": h.area ?? null, "Área construída (m²)": h.ac ?? null,
     "Valor m² terreno (R$)": h.vm2 ?? null, "Valor venal ref. terreno (R$)": venal,
@@ -134,14 +135,14 @@ function rowOut(r) {
 function render() {
   const cls = s => s.startsWith("Encontrado") ? "ok" : s.startsWith("Não") ? "bad" : "warn";
   const out = results.map(rowOut);
-  const head = ["Endereço informado","Situação","SQL","Endereço no cadastro","Área do terreno (m²)","Área construída (m²)","Valor venal ref. terreno (R$)","IPTU estimado (R$/ano)",""];
+  const head = ["Nome","Endereço informado","Situação","SQL","Endereço no cadastro","Área do terreno (m²)","Área construída (m²)","Valor venal ref. terreno (R$)","IPTU estimado (R$/ano)",""];
   $("res").innerHTML = "<tr>" + head.map(h => `<th>${h}</th>`).join("") + "</tr>" + out.map((o, i) => `<tr>
-    <td>${esc(o["Endereço informado"])}</td><td class="${cls(o["Situação"])}">${esc(o["Situação"])}</td>
+    <td>${esc(o.Nome)}</td><td>${esc(o["Endereço informado"])}</td><td class="${cls(o["Situação"])}">${esc(o["Situação"])}</td>
     <td>${esc(o.SQL)}</td><td>${esc(o["Endereço no cadastro"])} ${o["Bairro"] ? "— " + esc(o["Bairro"]) : ""}</td>
     <td class="num">${m2(o["Área do terreno (m²)"])}</td><td class="num">${m2(o["Área construída (m²)"])}</td>
     <td class="num">${brl(o["Valor venal ref. terreno (R$)"])}</td><td class="num">${brl(o["IPTU estimado (R$/ano)"])}</td>
     <td>${o.SQL ? `<a href="${CONSULTA}" target="_blank" rel="noopener" title="Abra e informe o SQL ${esc(o.SQL)}">conferir</a>` : ""}</td></tr>`).join("");
-  const ok = new Set(results.filter(r => r.h).map(r => r.q)).size, tot = new Set(results.map(r => r.q)).size;
+  const ok = new Set(results.filter(r => r.h).map(r => r.line)).size, tot = new Set(results.map(r => r.line)).size;
   $("summary").textContent = `${ok} de ${tot} endereços com resultado.`;
   $("resCard").hidden = false;
 }
