@@ -27,6 +27,7 @@ assert.strictEqual(lookup(idx, "Rua Dr Arnaldu 455").status, "Encontrado");     
 assert.strictEqual(lookup(idx, "Rua Dr Arnaldo 455").hits[0].zona, "ZEU / ZM");
 assert.match(lookup(idx, "Av Nacoes Unidas km 12").status, /Sem número/);
 assert.strictEqual(lookup(idx, "Rodovia Fernão Dias, s/n - Km 84 - Tremembé").hits.length, 0); // sem número: só sinaliza
+assert.strictEqual(lookup(buildIndex({ cols: ["sql", "logradouro", "numero"], rows: [["062.1", "AV CDSSA ELISABETH DE ROBIANO", "1792"]] }), "Av. Condessa Elisabeth de Robiano, 1792").status, "Encontrado"); // CDSSA = Condessa
 assert.strictEqual(lookup(idx, "Avenida das Nações Unidas - Brooklin").status, "Sem número — conferir");
 assert.strictEqual(lookup(idx, "Avenida Jornalista Paulo Zingg, 1225").status, "Encontrado");      // JORN no cadastro
 assert.strictEqual(lookup(idx, "Rua Padre Leão Peruche, 445").status, "Encontrado");              // PDE no cadastro
