@@ -100,7 +100,7 @@ let index = null, results = [];
 const CONSULTA = "https://www.prefeitura.sp.gov.br/cidade/secretarias/fazenda/servicos/iptu/";
 
 // Ao publicar uma mudança, troque a data e o texto: quem já viu o aviso anterior verá este uma vez.
-const NOVIDADE = { data: "2026-11-23", txt: "Logo nova e botão Imprimir, que imprime o resultado em folha A4." };
+const NOVIDADE = { data: "2026-11-23.2", txt: "A impressão agora sai mais limpa: só o título e a tabela, sem a nota da fonte." };
 try {
   if (localStorage.getItem("novidadeVista") !== NOVIDADE.data) {
     $("novTxt").textContent = NOVIDADE.txt;
