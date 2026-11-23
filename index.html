@@ -99,15 +99,15 @@ let index = null, results = [];
 // Link oficial onde a pessoa confere o IPTU exato pelo SQL.
 const CONSULTA = "https://www.prefeitura.sp.gov.br/cidade/secretarias/fazenda/servicos/iptu/";
 
-// Ao publicar uma mudança, troque a data e o texto: quem já viu o aviso anterior verá este uma vez.
-const NOVIDADE = { data: "2026-11-23.2", txt: "A impressão agora sai mais limpa: só o título e a tabela, sem a nota da fonte." };
-try {
-  if (localStorage.getItem("novidadeVista") !== NOVIDADE.data) {
-    $("novTxt").textContent = NOVIDADE.txt;
-    $("novidade").hidden = false;
-  }
-} catch {}
-$("novOk").onclick = () => { $("novidade").hidden = true; try { localStorage.setItem("novidadeVista", NOVIDADE.data); } catch {} };
+// versao.json é gerado pelo deploy.sh a partir do último commit; cada versão nova aparece uma vez.
+fetch("versao.json", { cache: "no-store" }).then(r => r.ok ? r.json() : null).then(v => {
+  if (!v) return;
+  let visto = null; try { visto = localStorage.getItem("novidadeVista"); } catch {}
+  if (visto === v.id) return;
+  $("novTxt").textContent = v.txt;
+  $("novidade").hidden = false;
+  $("novOk").onclick = () => { $("novidade").hidden = true; try { localStorage.setItem("novidadeVista", v.id); } catch {} };
+}).catch(() => {});
 
 fetch("terrenos.json").then(r => r.json()).then(d => {
   index = buildIndex(d);

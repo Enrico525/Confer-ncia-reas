@@ -12,11 +12,10 @@ Dados: Cadastro Imobiliário Fiscal (IPTU) da Prefeitura de São Paulo, publicad
 2. Rode `uv run --no-project --with shapely python zona.py` (baixa lotes e zonas do GeoSampa e gera `zonas.json`; leva alguns minutos).
 3. Rode `python prep.py IPTU_<ano>.zip 500` (gera `terrenos.json` já com o zoneamento).
 4. Faça commit e push do novo `terrenos.json`.
-5. Publique no Cloudflare Pages (projeto `conferencia-areas`, separado do financeiro), enviando só os arquivos do site:
-   `mkdir dist && cp index.html match.js terrenos.json logo.svg dist/ && npx wrangler pages deploy dist --project-name conferencia-areas --branch main`
+5. Publique no Cloudflare Pages (projeto `conferencia-areas`, separado do financeiro) com `bash deploy.sh`. Ele envia só os arquivos do site e gera o aviso de novidade.
 
 Teste da busca: `node test.js`.
 
-Aviso de novidade: ao publicar uma mudança, troque `NOVIDADE` (data e texto) no `index.html` — no mesmo dia, acrescente `.2`, `.3`… à data. Cada pessoa vê o aviso uma vez, até clicar em "Entendi".
+Aviso de novidade: sai sozinho a cada publicação com `bash deploy.sh`. O texto é a mensagem do último commit, então escreva-a pensando em quem usa o site. Cada pessoa vê o aviso uma vez, até clicar em "Entendi".
 
 Quando o lote fica em mais de uma zona, aparecem as que cobrem ao menos 10% dele, a maior primeiro.
