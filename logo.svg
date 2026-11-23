@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Conferência de Áreas">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#123a7a"/><stop offset="1" stop-color="#061633"/></linearGradient>
+    <linearGradient id="am" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd23a"/><stop offset="1" stop-color="#f5a800"/></linearGradient>
+    <clipPath id="t"><rect width="128" height="128" rx="28"/></clipPath>
+  </defs>
+  <rect width="128" height="128" rx="28" fill="url(#bg)"/>
+  <!-- ruas do mapa -->
+  <g clip-path="url(#t)" fill="none" stroke="#2a5aa8" stroke-opacity=".45" stroke-width="5" stroke-linecap="round">
+    <path d="M-10 40L60 12L140 30"/><path d="M-10 100L70 70L140 96"/><path d="M38 -10L70 70L96 140"/><path d="M100 -10L112 60"/>
+  </g>
+  <!-- fita saindo da trena -->
+  <g transform="rotate(14 70 84)">
+    <rect x="66" y="78" width="40" height="12" rx="1.5" fill="url(#am)"/>
+    <path d="M74 78v5M79 78v3M84 78v5M89 78v3M94 78v5M99 78v3" stroke="#061633" stroke-width="1.6" stroke-linecap="round"/>
+    <rect x="104" y="74" width="7" height="20" rx="2" fill="#c9d1dc"/>
+    <circle cx="107.5" cy="84" r="1.6" fill="#8a94a3"/>
+  </g>
+  <!-- corpo da trena -->
+  <path d="M22 66a26 26 0 0 1 26-26h14a14 14 0 0 1 14 14v34a8 8 0 0 1-8 8H48a26 26 0 0 1-26-26z" fill="url(#am)"/>
+  <rect x="57" y="35" width="15" height="9" rx="3" fill="#0b2450"/>
+  <circle cx="48" cy="69" r="17" fill="#0b2450"/>
+  <circle cx="48" cy="69" r="6" fill="#123a7a"/>
+  <!-- alfinete -->
+  <path d="M96 14c-8.3 0-15 6.5-15 14.6C81 40 96 56 96 56s15-16 15-27.4C111 20.5 104.3 14 96 14z" fill="url(#am)"/>
+  <circle cx="96" cy="28.5" r="5.6" fill="#0b2450"/>
+</svg>

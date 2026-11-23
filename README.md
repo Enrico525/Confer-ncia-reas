@@ -13,7 +13,7 @@ Dados: Cadastro Imobiliário Fiscal (IPTU) da Prefeitura de São Paulo, publicad
 3. Rode `python prep.py IPTU_<ano>.zip 500` (gera `terrenos.json` já com o zoneamento).
 4. Faça commit e push do novo `terrenos.json`.
 5. Publique no Cloudflare Pages (projeto `conferencia-areas`, separado do financeiro), enviando só os arquivos do site:
-   `mkdir dist && cp index.html match.js terrenos.json dist/ && npx wrangler pages deploy dist --project-name conferencia-areas --branch main`
+   `mkdir dist && cp index.html match.js terrenos.json logo.svg dist/ && npx wrangler pages deploy dist --project-name conferencia-areas --branch main`
 
 Teste da busca: `node test.js`.
 

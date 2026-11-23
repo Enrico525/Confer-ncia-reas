@@ -4,13 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Conferência de Áreas</title>
+<link rel="icon" href="logo.svg" type="image/svg+xml">
 <style>
   :root { --bg:#f6f7f9; --card:#fff; --tx:#1d2330; --mut:#5d6675; --bd:#d9dee6; --pri:#1f5fbf; --ok:#1d7a46; --warn:#a86400; --bad:#b3261e; }
   @media (prefers-color-scheme: dark) { :root { --bg:#14171c; --card:#1d2128; --tx:#e6e9ee; --mut:#9aa3b1; --bd:#333a45; --pri:#6aa3ff; --ok:#5cc98a; --warn:#f0b35a; --bad:#ff8a80; } }
   * { box-sizing:border-box; }
   body { margin:0; background:var(--bg); color:var(--tx); font:15px/1.5 system-ui,Segoe UI,Roboto,sans-serif; }
   main { max-width:1100px; margin:0 auto; padding:24px 16px 64px; }
-  h1 { font-size:22px; margin:0 0 4px; }
+  h1 { font-size:22px; margin:0 0 4px; display:flex; align-items:center; gap:12px; }
+  h1 img { width:44px; height:44px; flex:none; }
   .sub { color:var(--mut); margin:0 0 20px; }
   .card { background:var(--card); border:1px solid var(--bd); border-radius:10px; padding:16px; margin-bottom:16px; }
   h2 { font-size:16px; margin:0 0 10px; }
@@ -44,7 +46,7 @@
 </head>
 <body>
 <main>
-  <h1>Conferência de Áreas — São Paulo</h1>
+  <h1><img src="logo.svg" alt="">Conferência de Áreas — São Paulo</h1>
   <p class="sub">Encontre área do terreno, SQL, zoneamento e IPTU estimado a partir de uma lista de endereços.</p>
 
   <section class="card" id="inCard">
