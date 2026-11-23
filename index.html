@@ -87,7 +87,7 @@
 </main>
 
 <div id="novidade" role="status" hidden>
-  <b>Novidade no site</b><span id="novTxt"></span>
+  <b id="novTit"></b><span id="novTxt"></span>
   <div class="row"><button id="novOk">Entendi</button></div>
 </div>
 
@@ -103,14 +103,28 @@ let index = null, results = [];
 const CONSULTA = "https://www.prefeitura.sp.gov.br/cidade/secretarias/fazenda/servicos/iptu/";
 
 // versao.json é gerado pelo deploy.sh a partir do último commit; cada versão nova aparece uma vez.
-fetch("versao.json", { cache: "no-store" }).then(r => r.ok ? r.json() : null).then(v => {
-  if (!v) return;
-  let visto = null; try { visto = localStorage.getItem("novidadeVista"); } catch {}
-  if (visto === v.id) return;
-  $("novTxt").textContent = v.txt;
-  $("novidade").hidden = false;
-  $("novOk").onclick = () => { $("novidade").hidden = true; try { localStorage.setItem("novidadeVista", v.id); } catch {} };
-}).catch(() => {});
+const marcaVista = id => { try { localStorage.setItem("novidadeVista", id); } catch {} };
+function aviso(titulo, txt, botao, acao) {
+  $("novTit").textContent = titulo; $("novTxt").textContent = txt; $("novOk").textContent = botao;
+  $("novOk").onclick = acao; $("novidade").hidden = false;
+}
+let versaoAberta = null;
+function checaVersao() {
+  fetch("versao.json", { cache: "no-store" }).then(r => r.ok ? r.json() : null).then(v => {
+    if (!v) return;
+    if (!versaoAberta) {
+      versaoAberta = v.id;
+      let visto = null; try { visto = localStorage.getItem("novidadeVista"); } catch {}
+      if (visto !== v.id) aviso("Novidade no site", v.txt, "Entendi", () => { $("novidade").hidden = true; marcaVista(v.id); });
+    } else if (v.id !== versaoAberta) {
+      // Saiu versão nova com a página aberta: pede para recarregar (a novidade já conta como vista).
+      aviso("Saiu uma atualização do site", v.txt + " Recarregue a página para usar a versão nova.", "Recarregar", () => { marcaVista(v.id); location.reload(); });
+    }
+  }).catch(() => {});
+}
+checaVersao();
+setInterval(checaVersao, 5 * 60 * 1000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) checaVersao(); });
 
 fetch("terrenos.json").then(r => r.json()).then(d => {
   index = buildIndex(d);
