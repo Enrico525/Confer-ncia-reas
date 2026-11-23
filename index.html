@@ -29,13 +29,14 @@
   a { color:var(--pri); }
   .note { font-size:13px; color:var(--mut); border-left:3px solid var(--warn); padding-left:10px; }
   @media print {
-    @page { size: landscape; margin: 12mm; }
+    @page { size: A4 portrait; margin: 10mm; }
     :root { --bg:#fff; --card:#fff; --tx:#000; --mut:#333; --bd:#999; }
     main { max-width:none; padding:0; }
     #inCard, #resCard .row, td:last-child, th:last-child { display:none; }
     .card { border:0; padding:0; }
     .tbl { overflow:visible; }
     th, td { white-space:normal; font-size:10px; padding:3px 4px; }
+    td:nth-child(4), td.num { white-space:nowrap; }
     th { position:static; }
     tr { break-inside:avoid; }
   }
