@@ -28,6 +28,17 @@
   .ok { color:var(--ok); } .warn { color:var(--warn); } .bad { color:var(--bad); }
   a { color:var(--pri); }
   .note { font-size:13px; color:var(--mut); border-left:3px solid var(--warn); padding-left:10px; }
+  @media print {
+    @page { size: landscape; margin: 12mm; }
+    :root { --bg:#fff; --card:#fff; --tx:#000; --mut:#333; --bd:#999; }
+    main { max-width:none; padding:0; }
+    #inCard, #resCard .row, td:last-child, th:last-child { display:none; }
+    .card { border:0; padding:0; }
+    .tbl { overflow:visible; }
+    th, td { white-space:normal; font-size:10px; padding:3px 4px; }
+    th { position:static; }
+    tr { break-inside:avoid; }
+  }
 </style>
 </head>
 <body>
@@ -35,7 +46,7 @@
   <h1>Conferência de Áreas — São Paulo</h1>
   <p class="sub">Encontre área do terreno, SQL, zoneamento e IPTU estimado a partir de uma lista de endereços.</p>
 
-  <section class="card">
+  <section class="card" id="inCard">
     <h2>1. Envie o documento ou cole os endereços</h2>
     <input type="file" id="file" accept=".pdf,.docx,.txt">
     <p class="muted">Aceita PDF, Word (.docx) ou texto. Os endereços encontrados aparecem abaixo — confira e corrija antes de buscar. Um endereço por linha; opcionalmente "Nome | endereço".</p>
@@ -50,6 +61,7 @@
     <h2>2. Resultado</h2>
     <div class="row" style="margin:0 0 10px">
       <button id="xlsx">Baixar planilha (Excel)</button>
+      <button class="sec" onclick="print()">Imprimir</button>
       <span id="summary" class="muted"></span>
     </div>
     <div class="tbl"><table id="res"></table></div>
