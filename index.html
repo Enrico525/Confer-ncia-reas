@@ -34,7 +34,8 @@
   #novidade b { display:block; margin-bottom:2px; }
   #novidade .row { justify-content:flex-end; margin-top:8px; }
   @media print {
-    #novidade, .note { display:none; }
+    #novidade, .note, .sub { display:none; }
+    h1 { margin-bottom:16px; }
     @page { size: A4 portrait; margin: 10mm; }
     :root { --bg:#fff; --card:#fff; --tx:#000; --mut:#333; --bd:#999; }
     main { max-width:none; padding:0; }
@@ -44,7 +45,7 @@
     table { width:auto; }
     .card { border:0; padding:0; }
     .tbl { overflow:visible; }
-    th, td { white-space:normal; font-size:10px; padding:3px 14px 3px 0; }
+    th, td { white-space:normal; font-size:13px; padding:4px 16px 4px 0; }
     td:nth-child(4), td.num { white-space:nowrap; }
     th { position:static; }
     tr { break-inside:avoid; }
