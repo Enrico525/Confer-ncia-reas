@@ -123,7 +123,7 @@ function checaVersao() {
   }).catch(() => {});
 }
 checaVersao();
-setInterval(checaVersao, 5 * 60 * 1000);
+setInterval(() => { if (!document.hidden) checaVersao(); }, 30 * 1000);
 document.addEventListener("visibilitychange", () => { if (!document.hidden) checaVersao(); });
 
 fetch("terrenos.json").then(r => r.json()).then(d => {
