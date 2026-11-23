@@ -39,9 +39,12 @@
     :root { --bg:#fff; --card:#fff; --tx:#000; --mut:#333; --bd:#999; }
     main { max-width:none; padding:0; }
     #inCard, #resCard .row, td:last-child, th:last-child { display:none; }
+    /* tira Situação (3ª) e Endereço no cadastro (5ª) */
+    th:nth-child(3), td:nth-child(3), th:nth-child(5), td:nth-child(5) { display:none; }
+    table { width:auto; }
     .card { border:0; padding:0; }
     .tbl { overflow:visible; }
-    th, td { white-space:normal; font-size:10px; padding:3px 4px; }
+    th, td { white-space:normal; font-size:10px; padding:3px 14px 3px 0; }
     td:nth-child(4), td.num { white-space:nowrap; }
     th { position:static; }
     tr { break-inside:avoid; }
