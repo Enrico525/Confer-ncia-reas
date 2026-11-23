@@ -17,4 +17,6 @@ Dados: Cadastro Imobiliário Fiscal (IPTU) da Prefeitura de São Paulo, publicad
 
 Teste da busca: `node test.js`.
 
+Aviso de novidade: ao publicar uma mudança, troque `NOVIDADE` (data e texto) no `index.html`. Cada pessoa vê o aviso uma vez, até clicar em "Entendi".
+
 Quando o lote fica em mais de uma zona, aparecem as que cobrem ao menos 10% dele, a maior primeiro.

@@ -30,7 +30,11 @@
   .ok { color:var(--ok); } .warn { color:var(--warn); } .bad { color:var(--bad); }
   a { color:var(--pri); }
   .note { font-size:13px; color:var(--mut); border-left:3px solid var(--warn); padding-left:10px; }
+  #novidade { position:fixed; right:16px; bottom:16px; left:16px; max-width:380px; margin-left:auto; background:var(--card); border:1px solid var(--bd); border-left:4px solid var(--pri); border-radius:10px; padding:12px 14px; box-shadow:0 6px 24px rgba(0,0,0,.18); font-size:14px; }
+  #novidade b { display:block; margin-bottom:2px; }
+  #novidade .row { justify-content:flex-end; margin-top:8px; }
   @media print {
+    #novidade { display:none; }
     @page { size: A4 portrait; margin: 10mm; }
     :root { --bg:#fff; --card:#fff; --tx:#000; --mut:#333; --bd:#999; }
     main { max-width:none; padding:0; }
@@ -79,6 +83,11 @@
   </p>
 </main>
 
+<div id="novidade" role="status" hidden>
+  <b>Novidade no site</b><span id="novTxt"></span>
+  <div class="row"><button id="novOk">Entendi</button></div>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -89,6 +98,16 @@ const $ = id => document.getElementById(id);
 let index = null, results = [];
 // Link oficial onde a pessoa confere o IPTU exato pelo SQL.
 const CONSULTA = "https://www.prefeitura.sp.gov.br/cidade/secretarias/fazenda/servicos/iptu/";
+
+// Ao publicar uma mudança, troque a data e o texto: quem já viu o aviso anterior verá este uma vez.
+const NOVIDADE = { data: "2026-11-23", txt: "Logo nova e botão Imprimir, que imprime o resultado em folha A4." };
+try {
+  if (localStorage.getItem("novidadeVista") !== NOVIDADE.data) {
+    $("novTxt").textContent = NOVIDADE.txt;
+    $("novidade").hidden = false;
+  }
+} catch {}
+$("novOk").onclick = () => { $("novidade").hidden = true; try { localStorage.setItem("novidadeVista", NOVIDADE.data); } catch {} };
 
 fetch("terrenos.json").then(r => r.json()).then(d => {
   index = buildIndex(d);
