@@ -8,10 +8,10 @@ Dados: Cadastro Imobiliário Fiscal (IPTU) da Prefeitura de São Paulo, publicad
 
 ## Atualizar a base (uma vez por ano)
 
-**Automático (robô):** `robo-iptu.ps1` roda a cada 30 minutos pelo Agendador de Tarefas do Windows (instale uma vez com `powershell -ExecutionPolicy Bypass -File robo-iptu.ps1 -Instalar`).
-- A cada 6 horas ele confere a ficha oficial do IPTU no GeoSampa. Quando a data de revisão muda de ano, ou a partir de 1º de março, avisa na tela e abre o GeoSampa.
-- Você só baixa o `IPTU_<ano>.zip` (o GeoSampa bloqueia downloads por programa). Quando o zip aparece em Downloads, o robô faz os passos 2 a 5 abaixo, confere se a base nova não encolheu mais de 10%, testa e avisa se deu certo ou errado.
-- Registro: `%LOCALAPPDATA%\robo-iptu\robo.log`. Para tentar de novo depois de um erro: `powershell -ExecutionPolicy Bypass -File robo-iptu.ps1 -Forcar`.
+**Automático (robô):** `robo-iptu.ps1` roda só em 15 e 28 de fevereiro às 10h, pelo Agendador de Tarefas do Windows (se o computador estiver desligado, roda ao ligar). Instale uma vez com `powershell -ExecutionPolicy Bypass -File robo-iptu.ps1 -Instalar`.
+- Ele confere a ficha oficial do IPTU no GeoSampa. Se a data de revisão já é do ano (ou na rodada do dia 28, mesmo sem mudança), avisa na tela e abre o GeoSampa.
+- Você só baixa o `IPTU_<ano>.zip` (o GeoSampa bloqueia downloads por programa). O robô espera o zip em Downloads por até 3 horas, faz os passos 2 a 5 abaixo, confere se a base nova não encolheu mais de 10%, testa e avisa se deu certo ou errado.
+- Registro: `%LOCALAPPDATA%\robo-iptu\robo.log`. Para rodar na mão (ou tentar de novo depois de um erro): `powershell -ExecutionPolicy Bypass -File robo-iptu.ps1 -Forcar`.
 
 **Na mão:**
 

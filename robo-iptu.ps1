@@ -1,7 +1,8 @@
-﻿# Robô do IPTU: avisa quando a Prefeitura publica o cadastro novo e, quando o zip aparece em Downloads,
-# atualiza a base, testa, faz commit, push e publica o site sozinho.
+﻿# Robô do IPTU: roda só em 15 e 28 de fevereiro (ou assim que o computador ligar depois disso).
+# Confere se a Prefeitura publicou o cadastro do IPTU do ano, avisa, espera o zip chegar em Downloads
+# e atualiza a base, testa, faz commit, push e publica o site sozinho.
 #   Instalar (uma vez):  powershell -ExecutionPolicy Bypass -File robo-iptu.ps1 -Instalar
-#   Rodar na mão:        powershell -ExecutionPolicy Bypass -File robo-iptu.ps1 [-Forcar]
+#   Rodar na mão:        powershell -ExecutionPolicy Bypass -File robo-iptu.ps1 -Forcar
 param([switch]$Instalar, [switch]$Forcar)
 $ErrorActionPreference = "Stop"
 $Repo = $PSScriptRoot
@@ -12,19 +13,23 @@ $Uv = Join-Path $env:USERPROFILE ".local\bin\uv.exe"
 $Bash = "C:\Program Files\Git\bin\bash.exe"
 $Ficha = "https://metadados.geosampa.prefeitura.sp.gov.br/geonetwork/srv/api/records/b971efa1-aad5-42f3-ad28-18f1f4efe270"
 $GeoSampa = "https://geosampa.prefeitura.sp.gov.br/"
+$Tarefa = "Robo IPTU - Conferencia de Areas"
 
 if ($Instalar) {
   # conhost --headless: roda sem janela nenhuma, para ninguém fechar o robô sem querer no meio.
   $acao = New-ScheduledTaskAction -Execute "conhost.exe" -WorkingDirectory $Repo `
     -Argument "--headless powershell.exe -NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`""
-  $gatilhos = @(
-    (New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME),
-    (New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Minutes 30))
-  )
   $cfg = New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
-    -MultipleInstances IgnoreNew -ExecutionTimeLimit (New-TimeSpan -Hours 2)
-  Register-ScheduledTask -TaskName "Robo IPTU - Conferencia de Areas" -Action $acao -Trigger $gatilhos -Settings $cfg -Force | Out-Null
-  Write-Output "Robô instalado: roda a cada 30 minutos e ao entrar no Windows. Registro em $Log"
+    -MultipleInstances IgnoreNew -ExecutionTimeLimit (New-TimeSpan -Hours 4)
+  # Os comandos do PowerShell não criam gatilho anual: monta a tarefa e troca o gatilho no XML.
+  $tmp = New-ScheduledTask -Action $acao -Settings $cfg -Trigger (New-ScheduledTaskTrigger -Once -At (Get-Date))
+  $xml = (Export-ScheduledTask -InputObject $tmp) -replace '(?s)<Triggers>.*</Triggers>', @"
+<Triggers><CalendarTrigger><StartBoundary>2027-02-15T10:00:00</StartBoundary><Enabled>true</Enabled>
+<ScheduleByMonth><DaysOfMonth><Day>15</Day><Day>28</Day></DaysOfMonth><Months><February /></Months></ScheduleByMonth>
+</CalendarTrigger></Triggers>
+"@
+  Register-ScheduledTask -TaskName $Tarefa -Xml $xml -Force | Out-Null
+  Write-Output "Robô instalado: roda em 15 e 28 de fevereiro às 10h (ou ao ligar o computador, se estiver desligado). Registro em $Log"
   exit
 }
 
@@ -48,6 +53,7 @@ Set-Location $Repo
 $fs = [IO.File]::OpenRead((Join-Path $Repo "terrenos.json"))
 $buf = New-Object byte[] 100; [void]$fs.Read($buf, 0, 100); $fs.Close()
 $anoBase = [int]([regex]::Match([Text.Encoding]::UTF8.GetString($buf), '"ano":"(\d{4})"').Groups[1].Value)
+$downloads = (New-Object -ComObject Shell.Application).NameSpace("shell:Downloads").Self.Path
 
 function Atualiza($zip, $ano) {
   Registra "Atualizando com $($zip.FullName)"
@@ -77,26 +83,27 @@ function Atualiza($zip, $ano) {
   Aviso "Robô do IPTU" "Pronto! O site agora usa o cadastro do IPTU $ano ($depois terrenos). Quem abrir o site vai ver o aviso de novidade."
 }
 
-# 1) Zip novo em Downloads? Atualiza na hora.
-$downloads = (New-Object -ComObject Shell.Application).NameSpace("shell:Downloads").Self.Path
-$zip = Get-ChildItem $downloads -Filter "IPTU_*.zip" -ErrorAction SilentlyContinue |
-  Where-Object { $_.Name -match '^IPTU_(\d{4})\.zip$' -and [int]$Matches[1] -gt $anoBase -and $_.LastWriteTime -lt (Get-Date).AddMinutes(-1) } |
-  Sort-Object Name -Descending | Select-Object -First 1
-if ($zip) {
-  $ano = [int]($zip.Name -replace '\D', '')
-  $marca = "$($zip.Name)|$($zip.Length)|$($zip.LastWriteTime.Ticks)"
-  if ($Forcar -or (Le "tentado.txt") -ne $marca) {
-    Atualiza $zip $ano
-    # Marca só no fim: se o computador desligar no meio, tenta de novo; se deu erro, não repete a cada 30 min (use -Forcar).
-    Grava "tentado.txt" $marca
-  }
-  exit
+# Zip mais novo que a base em Downloads (ignora o que ainda está baixando e o que já deu erro, salvo -Forcar).
+function AchaZip {
+  $z = Get-ChildItem $downloads -Filter "IPTU_*.zip" -ErrorAction SilentlyContinue |
+    Where-Object { $_.Name -match '^IPTU_(\d{4})\.zip$' -and [int]$Matches[1] -gt $anoBase -and $_.LastWriteTime -lt (Get-Date).AddMinutes(-1) } |
+    Sort-Object Name -Descending | Select-Object -First 1
+  if ($z -and ($Forcar -or (Le "tentado.txt") -ne "$($z.Name)|$($z.Length)|$($z.LastWriteTime.Ticks)")) { $z }
+}
+function Processa($z) {
+  Atualiza $z ([int]($z.Name -replace '\D', ''))
+  # Marca só no fim: se o computador desligar no meio, tenta de novo na próxima vez; se deu erro, não repete (use -Forcar).
+  Grava "tentado.txt" "$($z.Name)|$($z.Length)|$($z.LastWriteTime.Ticks)"
 }
 
-# 2) Saiu o cadastro novo? Confere a ficha oficial do IPTU no GeoSampa a cada 6 horas.
-$ultima = Le "ultima-checagem.txt"
-if (-not $Forcar -and $ultima -and ((Get-Date) - [datetime]$ultima).TotalHours -lt 6) { exit }
-Grava "ultima-checagem.txt" (Get-Date -Format s)
+$alvo = (Get-Date).Year
+if ($anoBase -ge $alvo) { Registra "A base já é do IPTU $anoBase. Nada a fazer."; exit }
+
+# 1) O zip já está em Downloads? Atualiza na hora.
+$zip = AchaZip
+if ($zip) { Processa $zip; exit }
+
+# 2) Saiu o cadastro do ano? Confere a ficha oficial do IPTU no GeoSampa (serviço público, sem bloqueio).
 $anoSaiu = 0
 try {
   $xml = (Invoke-WebRequest $Ficha -UseBasicParsing -Headers @{ Accept = "application/xml" } -TimeoutSec 60).Content
@@ -105,13 +112,22 @@ try {
   if ($m.Success) { $anoSaiu = [int]$m.Groups[1].Value } else { Registra "Não achei a data de revisão na ficha do IPTU." }
 } catch { Registra "Falha ao consultar a ficha do IPTU: $_" }
 
-$proximo = $anoBase + 1
-# Se a ficha não mudar, avisa mesmo assim a partir de março (o IPTU costuma sair em fevereiro).
-$prazo = (Get-Date) -ge (Get-Date -Year $proximo -Month 3 -Day 1)
-if (($anoSaiu -ge $proximo -or $prazo) -and (Le "avisado.txt") -ne "$proximo") {
-  Grava "avisado.txt" "$proximo"
-  $txt = if ($anoSaiu -ge $proximo) { "Parece que a Prefeitura publicou o cadastro do IPTU $proximo." } else { "Já é março: o cadastro do IPTU $proximo deve ter saído." }
-  $r = Aviso "Robô do IPTU" "$txt`n`nNo GeoSampa: Camadas > pesquise ""Lote"" > ícone (i) > botão IPTU > pasta XLS CSV > baixe IPTU_$proximo.zip.`nDeixe o arquivo em Downloads: o robô faz o resto sozinho.`n`nAbrir o GeoSampa agora?" "YesNo"
-  if ("$r" -eq "Yes") { Start-Process $GeoSampa }
-  Registra "Avisou sobre o IPTU $proximo."
+# Na rodada do fim do mês (ou rodando na mão) avisa mesmo que a ficha não tenha mudado: o IPTU costuma sair em fevereiro.
+$fimDoMes = (Get-Date).Month -gt 2 -or (Get-Date).Day -ge 25
+if ($anoSaiu -lt $alvo -and -not $fimDoMes -and -not $Forcar) { Registra "IPTU $alvo ainda não saiu (ficha: $anoSaiu)."; exit }
+
+$txt = if ($anoSaiu -ge $alvo) { "A Prefeitura publicou o cadastro do IPTU $alvo." } else { "O cadastro do IPTU $alvo já deve ter saído." }
+$r = Aviso "Robô do IPTU" "$txt`n`nNo GeoSampa: Camadas > pesquise ""Lote"" > ícone (i) > botão IPTU > pasta XLS CSV > baixe IPTU_$alvo.zip.`nDeixe o arquivo em Downloads: nas próximas 3 horas o robô percebe e faz o resto sozinho.`n`nAbrir o GeoSampa agora?" "YesNo"
+Registra "Avisou sobre o IPTU $alvo (resposta: $r)."
+if ("$r" -ne "Yes") { exit }
+Start-Process $GeoSampa
+
+# 3) Espera o download por até 3 horas, olhando a pasta a cada 30 segundos.
+$limite = (Get-Date).AddHours(3)
+while ((Get-Date) -lt $limite) {
+  Start-Sleep -Seconds 30
+  $zip = AchaZip
+  if ($zip) { Processa $zip; exit }
 }
+Registra "O zip do IPTU $alvo não apareceu em Downloads em 3 horas."
+Aviso "Robô do IPTU" "O arquivo IPTU_$alvo.zip não apareceu em Downloads nas últimas 3 horas.`n`nQuando baixar, rode o robô na mão (veja o README) ou espere a próxima rodada."
