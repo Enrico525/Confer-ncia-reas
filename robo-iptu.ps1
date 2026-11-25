@@ -96,12 +96,12 @@ function Processa($z) {
   Grava "tentado.txt" "$($z.Name)|$($z.Length)|$($z.LastWriteTime.Ticks)"
 }
 
-$alvo = (Get-Date).Year
-if ($anoBase -ge $alvo) { Registra "A base já é do IPTU $anoBase. Nada a fazer."; exit }
-
-# 1) O zip já está em Downloads? Atualiza na hora.
+# 1) Um zip mais novo que a base já está em Downloads? Atualiza na hora, seja qual for a data.
 $zip = AchaZip
 if ($zip) { Processa $zip; exit }
+
+$alvo = (Get-Date).Year
+if ($anoBase -ge $alvo) { Registra "A base já é do IPTU $anoBase. Nada a fazer."; exit }
 
 # 2) Saiu o cadastro do ano? Confere a ficha oficial do IPTU no GeoSampa (serviço público, sem bloqueio).
 $anoSaiu = 0
