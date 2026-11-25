@@ -5,9 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Conferência de Áreas</title>
 <link rel="icon" href="logo.svg" type="image/svg+xml">
+<script>try { const t = localStorage.getItem("tema"); if (t) document.documentElement.dataset.tema = t; } catch {}</script>
 <style>
-  :root { --bg:#f6f7f9; --card:#fff; --tx:#1d2330; --mut:#5d6675; --bd:#d9dee6; --pri:#1f5fbf; --ok:#1d7a46; --warn:#a86400; --bad:#b3261e; }
-  @media (prefers-color-scheme: dark) { :root { --bg:#14171c; --card:#1d2128; --tx:#e6e9ee; --mut:#9aa3b1; --bd:#333a45; --pri:#6aa3ff; --ok:#5cc98a; --warn:#f0b35a; --bad:#ff8a80; } }
+  :root { --bg:#f6f7f9; --card:#fff; --tx:#1d2330; --mut:#5d6675; --bd:#d9dee6; --pri:#1f5fbf; --ok:#1d7a46; --warn:#a86400; --bad:#b3261e; color-scheme:light; }
+  :root[data-tema=escuro] { --bg:#14171c; --card:#1d2128; --tx:#e6e9ee; --mut:#9aa3b1; --bd:#333a45; --pri:#6aa3ff; --ok:#5cc98a; --warn:#f0b35a; --bad:#ff8a80; color-scheme:dark; }
+  @media (prefers-color-scheme: dark) { :root:not([data-tema=claro]) { --bg:#14171c; --card:#1d2128; --tx:#e6e9ee; --mut:#9aa3b1; --bd:#333a45; --pri:#6aa3ff; --ok:#5cc98a; --warn:#f0b35a; --bad:#ff8a80; color-scheme:dark; } }
+  header { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+  .cfg { position:relative; flex:none; }
+  .cfg summary { list-style:none; cursor:pointer; font-size:22px; line-height:1; padding:6px 8px; border-radius:8px; color:var(--mut); }
+  .cfg summary::-webkit-details-marker { display:none; }
+  .cfg summary:hover, .cfg summary:focus-visible { background:var(--card); color:var(--tx); outline:1px solid var(--bd); }
+  .cfg .painel { position:absolute; right:0; top:42px; z-index:5; width:280px; background:var(--card); border:1px solid var(--bd); border-radius:10px; padding:14px; box-shadow:0 6px 24px rgba(0,0,0,.18); }
+  .cfg h2 { margin-bottom:8px; }
+  .cfg .opc { display:flex; gap:6px; margin:4px 0 14px; }
+  .cfg .opc button { flex:1; padding:7px 0; background:transparent; color:var(--tx); border:1px solid var(--bd); }
+  .cfg .opc button[aria-pressed=true] { background:var(--pri); color:#fff; border-color:var(--pri); }
   * { box-sizing:border-box; }
   body { margin:0; background:var(--bg); color:var(--tx); font:15px/1.5 system-ui,Segoe UI,Roboto,sans-serif; }
   main { max-width:1100px; margin:0 auto; padding:24px 16px 64px; }
@@ -38,10 +50,10 @@
   #novidade b { display:block; margin-bottom:2px; }
   #novidade .row { justify-content:flex-end; margin-top:8px; }
   @media print {
-    #novidade, .note, .sub { display:none; }
+    #novidade, .note, .sub, .cfg { display:none; }
     h1 { margin-bottom:16px; }
     @page { size: A4 portrait; margin: 10mm; }
-    :root { --bg:#fff; --card:#fff; --tx:#000; --mut:#333; --bd:#999; }
+    :root, :root[data-tema], :root:not([data-tema=claro]) { --bg:#fff; --card:#fff; --tx:#000; --mut:#333; --bd:#999; }
     main { max-width:none; padding:0; }
     #inCard, #resCard .row, td:last-child, th:last-child { display:none; }
     /* tira Nome (1ª), Situação (3ª) e Endereço no cadastro (5ª) */
@@ -58,7 +70,22 @@
 </head>
 <body>
 <main>
-  <h1><img src="logo.svg" alt="">Conferência de Áreas — São Paulo</h1>
+  <header>
+    <h1><img src="logo.svg" alt="">Conferência de Áreas — São Paulo</h1>
+    <details class="cfg">
+      <summary title="Configurações" aria-label="Configurações">⚙</summary>
+      <div class="painel">
+        <h2>Configurações</h2>
+        <div class="muted">Tema</div>
+        <div class="opc" id="tema">
+          <button data-t="">Automático</button><button data-t="claro">Claro</button><button data-t="escuro">Escuro</button>
+        </div>
+        <div class="muted">Base de dados</div>
+        <div>Cadastro do IPTU <b id="anoCfg">?</b></div>
+        <p class="muted" style="margin:6px 0 0">Quando a Prefeitura publica o IPTU do ano seguinte, o site é atualizado e mostra um aviso de novidade.</p>
+      </div>
+    </details>
+  </header>
   <p class="sub">Encontre área do terreno, SQL, zoneamento e IPTU estimado a partir de uma lista de endereços.</p>
 
   <section class="card" id="inCard">
@@ -131,9 +158,23 @@ checaVersao();
 setInterval(() => { if (!document.hidden) checaVersao(); }, 30 * 1000);
 document.addEventListener("visibilitychange", () => { if (!document.hidden) checaVersao(); });
 
+// Tema: vazio = segue o sistema; a escolha fica salva no navegador.
+function mostraTema() {
+  const t = document.documentElement.dataset.tema || "";
+  for (const b of $("tema").children) b.setAttribute("aria-pressed", b.dataset.t === t);
+}
+$("tema").onclick = e => {
+  const t = e.target.dataset?.t; if (t == null) return;
+  if (t) document.documentElement.dataset.tema = t; else delete document.documentElement.dataset.tema;
+  try { t ? localStorage.setItem("tema", t) : localStorage.removeItem("tema"); } catch {}
+  mostraTema();
+};
+mostraTema();
+document.addEventListener("click", e => { const c = document.querySelector(".cfg"); if (c.open && !c.contains(e.target)) c.open = false; });
+
 fetch("terrenos.json").then(r => r.json()).then(d => {
   index = buildIndex(d);
-  $("ano").textContent = d.ano;
+  $("ano").textContent = $("anoCfg").textContent = d.ano;
   $("status").textContent = `Base carregada: ${d.rows.length.toLocaleString("pt-BR")} terrenos (≥ ${d.areaMin} m²).`;
   $("go").disabled = false;
 }).catch(e => { $("status").innerHTML = `<span class="bad">Falha ao carregar a base: ${e.message}</span>`; });
