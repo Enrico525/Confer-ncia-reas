@@ -14,8 +14,9 @@ $Ficha = "https://metadados.geosampa.prefeitura.sp.gov.br/geonetwork/srv/api/rec
 $GeoSampa = "https://geosampa.prefeitura.sp.gov.br/"
 
 if ($Instalar) {
-  $acao = New-ScheduledTaskAction -Execute "powershell.exe" -WorkingDirectory $Repo `
-    -Argument "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$PSCommandPath`""
+  # conhost --headless: roda sem janela nenhuma, para ninguém fechar o robô sem querer no meio.
+  $acao = New-ScheduledTaskAction -Execute "conhost.exe" -WorkingDirectory $Repo `
+    -Argument "--headless powershell.exe -NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`""
   $gatilhos = @(
     (New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME),
     (New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Minutes 30))
@@ -85,8 +86,9 @@ if ($zip) {
   $ano = [int]($zip.Name -replace '\D', '')
   $marca = "$($zip.Name)|$($zip.Length)|$($zip.LastWriteTime.Ticks)"
   if ($Forcar -or (Le "tentado.txt") -ne $marca) {
-    Grava "tentado.txt" $marca  # não repete a cada 30 min se der erro; use -Forcar para tentar de novo
     Atualiza $zip $ano
+    # Marca só no fim: se o computador desligar no meio, tenta de novo; se deu erro, não repete a cada 30 min (use -Forcar).
+    Grava "tentado.txt" $marca
   }
   exit
 }
